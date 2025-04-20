@@ -83,7 +83,8 @@ void setup(void)
     i2s_rxtx_begin(true, false);        // Enable I2S RX
 }
 
-static int16_t buffer[1600];
+#define BUFFER_SIZE 512
+static int16_t buffer[BUFFER_SIZE];
 
 void loop(void)
 {
@@ -95,33 +96,25 @@ void loop(void)
             printf("Client connected: %s\n", client.remoteIP().toString().c_str());
 
             // send initial wav header
+            client.setNoDelay(true);
             client.write(wav_header, sizeof(wav_header));
         }
     } else {
         // data processing loop
-        if (!client.connected()) {
-            printf("Client disconnected.\n");
-            client.stop();
-        } else {
-            // send data from circular buffer ...
-            uint16_t avail = i2s_rx_available();
-            if (avail > 0) {
-                if (avail > 1600) {
-                    avail = 1600;
-                }
-                int index = 0;
-                for (int i = 0; i < avail; i++) {
-                    int16_t left = 0;
-                    int16_t right = 0;
-                    if (!i2s_read_sample(&left, &right, true)) {
-                        printf("truncate at %d\n", index);
-                        break;
-                    }
-                    buffer[index++] = (left + right) / 2;
-                }
-                printf(".");
-                client.write((uint8_t *) buffer, 2 * index);
+        uint16_t avail = i2s_rx_available();
+        if (avail > 0) {
+            printf("%u.", avail);
+            if (avail > BUFFER_SIZE) {
+                avail = BUFFER_SIZE;
             }
+            int index = 0;
+            for (int i = 0; i < avail; i++) {
+                int16_t left = 0;
+                int16_t right = 0;
+                i2s_read_sample(&left, &right, true);
+                buffer[index++] = (left + right) / 2;
+            }
+            client.write((uint8_t *) buffer, index * 2);
         }
     }
 
