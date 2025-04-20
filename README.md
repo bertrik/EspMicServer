@@ -13,9 +13,9 @@ Connections are as follows:
 | D5    | WS      | Sample clock |
 | D6    | SD      | Data-out from the mic |
 | D7    | SCK     | High speed bit clock|
-| D8    | L/R     | Tells microphone which I2S channel to use  
-| GND   | GND     ||
-| 3V3   | VDD     ||
+| D8    | L/R     | Tells mic which I2S channel to use |
+| GND   | GND     | Ground |
+| 3V3   | VDD     | Power supply |
 
 ## Software
 
@@ -25,7 +25,7 @@ The firmware uses platformio.
 It initialises the microphone for 16000 Hz sample rate.
 Pin D8 sets the I2S channel (left/right) that the microphone publishes data on. 
 
-The firmware opens a port that external applications can connect to. Connecting to it causes a WAV header to be sent, followed by continuous mono 16-bit signed samples from the microphone. 
+The firmware opens a TCP port that external applications can connect to. Connecting to it causes an initial WAV header to be sent with audio format information, followed by continuous mono 16-bit signed samples from the microphone. 
 
 Build it using visual code + platformio plugin, or from the command line:
 
@@ -36,12 +36,12 @@ source .venv/bin/activate
 pip3 install platformio
 ```
 
-Reinitialise the python virtual environment when working on the code again:
+Reinitialise the python virtual environment later when working on the code again:
 ```bash
 source .venv/bin/activate
 ```
 
-Compile and upload the code:
+Compile/upload the code and monitor serial output:
 ```bash
 pio run -t upload
 pio device monitor
