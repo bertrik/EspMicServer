@@ -9,12 +9,15 @@
 #include <MiniShell.h>
 
 #define printf Serial.printf
+#define PIN_I2S_LR D8
 #define SERVER_PORT 1234
+#define AUDIO_BUFFER_SIZE 512
 
 static WiFiManager wifiManager;
 static MiniShell shell(&Serial);
 static WiFiServer server(SERVER_PORT);
 static WiFiClient client;
+static int16_t buffer[AUDIO_BUFFER_SIZE];
 
 static const uint8_t wav_header[44] = {
     'R', 'I', 'F', 'F',         // ChunkID
@@ -62,6 +65,11 @@ void setup(void)
 {
     Serial.begin(115200);
 
+    // configure i2s
+    pinMode(PIN_I2S_LR, OUTPUT);        // L/R signal
+    digitalWrite(PIN_I2S_LR, 0);
+    i2s_set_rate(16000);
+
     // connect to wifi
     printf("Starting WIFI manager (%s)...\n", WiFi.SSID().c_str());
     wifiManager.setConfigPortalTimeout(120);
@@ -71,20 +79,15 @@ void setup(void)
     server.setNoDelay(true);
     server.begin();
 
-    MDNS.begin("EspMicServer");
-    MDNS.addService("wav", "tcp", SERVER_PORT);
+    MDNS.begin("espmicserver");
+    MDNS.addService("audio", "tcp", SERVER_PORT);
+    MDNS.addServiceTxt("audio", "tcp", "desc", "WAV audio stream");
 
-    // play with ffplay tcp://EspMicServer.local:1234
+    // play audio with ffplay tcp://espmicserver.local:1234
 
-    // configure i2s
-    pinMode(D8, OUTPUT);        // L/R signal
-    digitalWrite(D8, 0);
-    i2s_set_rate(16000);
-    i2s_rxtx_begin(true, false);        // Enable I2S RX
+    // start i2s
+    i2s_rxtx_begin(true, false);
 }
-
-#define BUFFER_SIZE 512
-static int16_t buffer[BUFFER_SIZE];
 
 void loop(void)
 {
@@ -104,8 +107,8 @@ void loop(void)
         uint16_t avail = i2s_rx_available();
         if (avail > 0) {
             printf("%u.", avail);
-            if (avail > BUFFER_SIZE) {
-                avail = BUFFER_SIZE;
+            if (avail > AUDIO_BUFFER_SIZE) {
+                avail = AUDIO_BUFFER_SIZE;
             }
             int index = 0;
             for (int i = 0; i < avail; i++) {
