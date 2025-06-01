@@ -55,7 +55,7 @@ One is to use `ffplay` from the ffmpeg package:
 ffplay tcp://espmicserver.local:1234
 ```
 
-Another is to use `sox` in combination with netcat `nc`:
+Another is to use sox `play` in combination with netcat `nc`:
 ```
 nc espmicserver.local 1234 |play -t wav -
 ```
